@@ -105,10 +105,6 @@ while cap.isOpened():
     if hand_position:
         cv2.circle(visualization, (hand_position[0], hand_position[1]), 5, (0, 255, 0), -1)  # Smaller circle
 
-    # Show the original video feed
-    cv2.imshow("Camera Feed", frame)
-    cv2.moveWindow("Camera Feed", 0, 0)
-
     # Show the processed video feed with hand landmarks
     cv2.imshow("Processed Feed", output_frame)
     cv2.moveWindow("Processed Feed", 920, 0)
