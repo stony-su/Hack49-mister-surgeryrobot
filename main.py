@@ -8,7 +8,8 @@ hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_c
 cap = cv2.VideoCapture(0)
 
 def generate_gcode(x, y, z):
-    return f"G1 X{x} Y{y} Z{z}"
+    z = z * 1e7
+    return f"G1 X{x} Y{y} Z{z:.2f}"
 
 # Main
 while cap.isOpened():
@@ -51,7 +52,7 @@ while cap.isOpened():
     cv2.imshow("Processed Feed", output_frame)
 
     # visualize hand point
-    visualization = np.zeros((480, 640, 3), dtype=np.uint8)
+    visualization = np.zeros((150, 150, 3), dtype=np.uint8)
     if hand_position:
         cv2.circle(visualization, (hand_position[0], hand_position[1]), 10, (0, 255, 0), -1)
 
