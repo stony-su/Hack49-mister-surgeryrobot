@@ -1,6 +1,39 @@
 import cv2
 import numpy as np
 import mediapipe as mp
+import serial
+import time
+
+# Configure the serial connection (adjust the port and baudrate as needed)
+printer_port = '/dev/ttyUSB0'  # Replace with your printer's port
+baudrate = 115200              # Common baudrate for Marlin
+
+# Connect to the printer
+ser = serial.Serial(printer_port, baudrate, timeout=1)
+
+def send_gcode(command):
+    # Send the G-code command
+    ser.write(f"{command}\n".encode())
+    # Read and print the response
+    response = ser.readline().decode('utf-8').strip()
+    print(f"Printer Response: {response}")
+    time.sleep(2)
+
+try:
+    # Wait for printer to initialize
+    time.sleep(2)
+
+    # Example: Send some G-code commands
+    send_gcode('G28')  # Home all axes
+    send_gcode('M104 S200')  # Set extruder temperature to 200C
+    send_gcode('M140 S60')  # Set bed temperature to 60C
+    send_gcode('G1 X50 Y50 Z0.3 F5000')  # Move to position (50, 50, 0.3)
+
+finally:
+    ser.close()  # Close the connection when done
+
+
+
 
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.7)
@@ -52,7 +85,7 @@ while cap.isOpened():
     cv2.imshow("Processed Feed", output_frame)
 
     # visualize hand point
-    visualization = np.zeros((150, 150, 3), dtype=np.uint8)
+    visualization = np.zeros((800, 1000, 3), dtype=np.uint8)
     if hand_position:
         cv2.circle(visualization, (hand_position[0], hand_position[1]), 10, (0, 255, 0), -1)
 
