@@ -34,7 +34,7 @@ def generate_gcode(x, y):
 def control_servo(pinch_distance):
     # Convert pinch distance to servo angle (0 to 90 degrees)
     servo_angle = int((1 - pinch_distance) * 90)  # Invert distance for servo control
-    return f"M280 P0 S{servo_angle}"  # Example G-code for controlling a servo
+    return f"M280 P0 S{90 - servo_angle}"  # Example G-code for controlling a servo
 
 def calculate_pinch_distance(thumb_tip, index_tip):
     # Calculate the Euclidean distance between thumb and index finger tips
@@ -103,7 +103,7 @@ while cap.isOpened():
                 prev_pinch_distance = pinch_distance_normalized  # Update the previous pinch distance
 
     # Show original video feed
-    cv2.imshow("Camera Feed", frame)
+    # cv2.imshow("Camera Feed", frame)
 
     # Show processed video stream (with hand tracking)
     cv2.imshow("Processed Feed", output_frame)

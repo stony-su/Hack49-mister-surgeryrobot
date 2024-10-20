@@ -1,22 +1,24 @@
 import cv2
 import numpy as np
 import mediapipe as mp
+import time
 
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.5)
 
 cap = cv2.VideoCapture(0)
 
-# To store previous hand positions for the trail
+# To store previous hand positions for the trail with their timestamps
 trail_points = []
 
 def generate_gcode(x, y, z):
     z = z * 1e7
     return f"G0 X{x} Y{y} Z{z:.2f}"
 
+# Define a buffer to store recent points for smoothing
 previous_points = []
 
-# Function to round and smooth points (you can adjust the rounding as needed)
+# Function to smooth the hand position using a moving average
 def smooth_point(x, y, window_size=5):
     global previous_points
 
@@ -50,6 +52,7 @@ while cap.isOpened():
 
     output_frame = frame.copy()
     hand_position = None
+    current_time = time.time()
 
     if results.multi_hand_landmarks:
         for hand_landmarks in results.multi_hand_landmarks:
@@ -70,21 +73,33 @@ while cap.isOpened():
             gcode = generate_gcode(hand_x, hand_y, hand_z)
             print(gcode)
 
-            # Append the current hand position to the trail
-            trail_points.append((hand_x, hand_y))
+            # Append the current hand position and timestamp to the trail
+            trail_points.append(((hand_x, hand_y), current_time))
 
     # Visualization for hand movement trail
     visualization = np.zeros((480, 640, 3), dtype=np.uint8)
 
-    # Draw trail if we have more than 1 point in the trail
-    if len(trail_points) > 1:
-        for i in range(1, len(trail_points)):
-            cv2.line(visualization, trail_points[i - 1], trail_points[i], (0, 255, 0), 1)  # Thinner line
+    # Time threshold for fading out (5 seconds)
+    fade_time = 5.0
 
-    # Draw polygon if at least 3 points are available (no fill)
-    if len(trail_points) >= 3:
-        pts = np.array(trail_points, np.int32).reshape((-1, 1, 2))
-        cv2.polylines(visualization, [pts], isClosed=True, color=(0, 255, 0), thickness=1)  # Thinner polygon
+    # Draw trail if we have more than 1 point in the trail
+    for i in range(1, len(trail_points)):
+        point, timestamp = trail_points[i]
+        prev_point, prev_timestamp = trail_points[i - 1]
+
+        # Calculate the time difference
+        time_diff = current_time - timestamp
+
+        if time_diff < fade_time:
+            # Calculate opacity based on time difference (fully opaque at 0 seconds, fully transparent at 5 seconds)
+            opacity = max(0, 255 - int((time_diff / fade_time) * 255))
+            color = (0, 255, 0, opacity)  # Green with calculated opacity
+
+            # Draw fading line between consecutive points
+            cv2.line(visualization, prev_point, point, (0, 255, 0, opacity), 2)
+
+    # Remove points that have faded out after 5 seconds
+    trail_points = [p for p in trail_points if current_time - p[1] < fade_time]
 
     # Show hand position with a green circle
     if hand_position:
@@ -98,7 +113,7 @@ while cap.isOpened():
     cv2.imshow("Processed Feed", output_frame)
     cv2.moveWindow("Processed Feed", 920, 0)
 
-    # Show the visualization with the trail and polygon
+    # Show the visualization with the trail and fading effect
     cv2.imshow("Hand Position Visualization", visualization)
 
     # Break the loop when 'q' is pressed
